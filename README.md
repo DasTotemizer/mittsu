@@ -25,8 +25,8 @@ Built in phases (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 | 1 | Project foundation, navigation, dashboard on sample data, visual identity | **Done** |
 | 2 | WaniKani connection: token, profile, subjects, assignments, caching | **Done** |
 | 3 | Three-answer quiz engine and difficulty | **Done** |
-| 4 | Real reviews submitted to WaniKani | Next |
-| 5 | Lessons and practice mode | |
+| 4 | Real reviews submitted to WaniKani | **Done** |
+| 5 | Lessons and practice mode | Next |
 | 6 | Smart review management (Daily Balance, Gentle Recovery) | |
 | 7 | Holiday Mode | |
 | 8 | Statistics, polish, offline | |

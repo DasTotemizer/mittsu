@@ -1,6 +1,7 @@
 package app.mittsu.repository
 
 import app.mittsu.database.MittsuDatabase
+import app.mittsu.database.ReviewStatus
 import app.mittsu.domain.model.ConnectionState
 import app.mittsu.domain.model.DashboardSummary
 import app.mittsu.domain.model.ReviewManagementMode
@@ -12,6 +13,8 @@ import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import java.time.Clock
+import java.time.Duration
+import java.time.ZoneId
 
 /**
  * Shows the real account once connected, and clearly labelled sample data before that.
@@ -22,6 +25,7 @@ class AccountDashboardRepository(
     private val db: MittsuDatabase,
     private val sample: DashboardRepository,
     private val clock: Clock = Clock.systemUTC(),
+    private val zone: () -> ZoneId = ZoneId::systemDefault,
 ) : DashboardRepository {
 
     private val ticker = flow {
@@ -39,10 +43,19 @@ class AccountDashboardRepository(
                 db.users().observe().filterNotNull(),
                 db.assignments().observeVisible(),
                 db.reviewStatistics().observeVisible(),
+                db.pendingReviews().observeSince(clock.millis() - Duration.ofDays(2).toMillis()),
                 ticker,
-            ) { user, assignments, stats, now ->
+            ) { user, assignments, stats, finished, now ->
+                val midnight = now.atZone(zone()).toLocalDate().atStartOfDay(zone()).toInstant().toEpochMilli()
+                // WaniKani's API no longer lists past reviews, so "today" counts reviews done in Mittsu.
+                val today = finished.count { it.status != ReviewStatus.REJECTED && it.completedAt >= midnight }
+                // Reviews finished here but not yet sent are no longer due from the user's point of view.
+                val waiting = finished.filter { it.status == ReviewStatus.PENDING }.map { it.assignmentId }.toSet()
                 // Target and mode are overlaid from settings by the ViewModel.
-                DashboardCalculator.summarise(user, assignments, stats, now, 50, ReviewManagementMode.DAILY_BALANCE)
+                DashboardCalculator.summarise(
+                    user, assignments.filterNot { it.id in waiting }, stats, now, 50, ReviewManagementMode.DAILY_BALANCE,
+                    reviewsCompletedToday = today,
+                )
             }
         }
     }

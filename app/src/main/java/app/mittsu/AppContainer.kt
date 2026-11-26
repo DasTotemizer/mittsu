@@ -11,6 +11,9 @@ import app.mittsu.repository.DashboardRepository
 import app.mittsu.repository.SampleDashboardRepository
 import app.mittsu.repository.SubjectRepository
 import app.mittsu.repository.WaniKaniAccountRepository
+import app.mittsu.reviews.ReviewRepository
+import app.mittsu.reviews.ReviewSubmitter
+import app.mittsu.reviews.WorkManagerUploadScheduler
 import app.mittsu.settings.DataStoreSettingsRepository
 import app.mittsu.settings.SettingsRepository
 
@@ -23,6 +26,9 @@ interface AppContainer {
     val accountRepository: AccountRepository
     val dashboardRepository: DashboardRepository
     val subjectRepository: SubjectRepository
+    /** The only path to POST /reviews. Practice code is never given this. */
+    val reviewSubmitter: ReviewSubmitter
+    val reviewRepository: ReviewRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -35,4 +41,7 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val dashboardRepository: DashboardRepository =
         AccountDashboardRepository(accountRepository, database, SampleDashboardRepository())
     override val subjectRepository: SubjectRepository = SubjectRepository(database)
+    override val reviewSubmitter: ReviewSubmitter = ReviewSubmitter(client, database)
+    override val reviewRepository: ReviewRepository =
+        ReviewRepository(database, reviewSubmitter, WorkManagerUploadScheduler(context.applicationContext))
 }

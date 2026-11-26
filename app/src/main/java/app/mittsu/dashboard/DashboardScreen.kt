@@ -168,7 +168,7 @@ private fun VacationNotice(onOpen: () -> Unit) {
 }
 
 @Composable
-private fun NoticeRow(icon: ImageVector, tint: Color, text: String, action: String?, onAction: () -> Unit, tag: String) {
+internal fun NoticeRow(icon: ImageVector, tint: Color, text: String, action: String?, onAction: () -> Unit, tag: String) {
     Row(
         Modifier
             .fillMaxWidth()

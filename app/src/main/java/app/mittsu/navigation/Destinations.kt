@@ -17,6 +17,10 @@ object Routes {
     const val SETTINGS = "settings"
     const val CONNECT = "connect"
     const val PRACTICE_QUIZ = "practice_quiz"
+    /** Real review session. `size` is a session size, or [REVIEW_RESUME] to continue a saved one. */
+    const val REVIEW_QUIZ = "review_quiz/{size}"
+    const val REVIEW_RESUME = -1
+    fun reviewQuiz(size: Int) = "review_quiz/$size"
 }
 
 enum class TopLevelDestination(val route: String, val label: String, val icon: ImageVector) {

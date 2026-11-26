@@ -1,6 +1,8 @@
 package app.mittsu.database
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +31,7 @@ interface AssignmentDao {
     @Query("SELECT * FROM assignments WHERE hidden = 0") fun observeVisible(): Flow<List<AssignmentEntity>>
     @Query("SELECT * FROM assignments WHERE hidden = 0") suspend fun visible(): List<AssignmentEntity>
     @Query("SELECT COUNT(*) FROM assignments") suspend fun count(): Int
+    @Query("SELECT * FROM assignments WHERE id = :id") suspend fun get(id: Long): AssignmentEntity?
 }
 
 @Dao
@@ -48,4 +51,33 @@ interface SyncStateDao {
     @Query("SELECT * FROM sync_state WHERE collection = :collection") suspend fun get(collection: String): SyncStateEntity?
     @Query("SELECT MIN(lastSyncedAt) FROM sync_state") fun observeOldestSync(): Flow<Long?>
     @Upsert suspend fun upsert(state: SyncStateEntity)
+}
+
+@Dao
+interface PendingReviewDao {
+    /** Returns -1 when this review is already recorded, so it is never stored or sent twice. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(review: PendingReviewEntity): Long
+    @Query("SELECT * FROM pending_reviews WHERE status = 'PENDING' ORDER BY completedAt, id") suspend fun pending(): List<PendingReviewEntity>
+    @Query("SELECT * FROM pending_reviews WHERE id = :id") suspend fun get(id: Long): PendingReviewEntity?
+    @Query("SELECT * FROM pending_reviews WHERE completedAt >= :since ORDER BY completedAt") fun observeSince(since: Long): Flow<List<PendingReviewEntity>>
+    @Query("SELECT * FROM pending_reviews WHERE status = 'PENDING' OR (status = 'REJECTED' AND visible = 1) ORDER BY completedAt")
+    fun observeOutstanding(): Flow<List<PendingReviewEntity>>
+    @Query("SELECT * FROM pending_reviews") suspend fun all(): List<PendingReviewEntity>
+    @Query("UPDATE pending_reviews SET status = 'SUBMITTED', submittedAt = :at, message = NULL, attempts = attempts + 1 WHERE id = :id")
+    suspend fun markSubmitted(id: Long, at: Long)
+    @Query("UPDATE pending_reviews SET status = 'REJECTED', message = :message, attempts = attempts + 1 WHERE id = :id")
+    suspend fun markRejected(id: Long, message: String)
+    @Query("UPDATE pending_reviews SET attempts = attempts + 1, message = :message WHERE id = :id")
+    suspend fun markAttemptFailed(id: Long, message: String)
+    @Query("UPDATE pending_reviews SET visible = 0 WHERE status = 'REJECTED'") suspend fun dismissRejected()
+    /** Keeps the table small: finished rows older than [before] are no longer needed. */
+    @Query("DELETE FROM pending_reviews WHERE status != 'PENDING' AND completedAt < :before") suspend fun pruneBefore(before: Long)
+}
+
+@Dao
+interface ActiveSessionDao {
+    @Query("SELECT * FROM active_session WHERE `key` = 0") suspend fun get(): ActiveSessionEntity?
+    @Query("SELECT * FROM active_session WHERE `key` = 0") fun observe(): Flow<ActiveSessionEntity?>
+    @Upsert suspend fun save(session: ActiveSessionEntity)
+    @Query("DELETE FROM active_session") suspend fun clear()
 }

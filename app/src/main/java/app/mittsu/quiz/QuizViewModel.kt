@@ -41,9 +41,18 @@ data class QuizUiState(
     val adaptive: Boolean = false,
     val stats: SessionStats = SessionStats(),
     val durationMillis: Long = 0,
+    /** Real reviews only: what happened to the finished reviews of this session. */
+    val submission: SubmissionSummary? = null,
+    /** Real reviews only: due items left on WaniKani because they can't be asked fairly here. */
+    val excluded: Int = 0,
 ) {
     val answered: Boolean get() = selected != null
     val progress: Float get() = if (totalItems == 0) 0f else completedItems.toFloat() / totalItems
+}
+
+/** How many of a real session's finished reviews WaniKani has, is waiting for, or refused. */
+data class SubmissionSummary(val sent: Int = 0, val waiting: Int = 0, val refused: Int = 0) {
+    val total: Int get() = sent + waiting + refused
 }
 
 /**

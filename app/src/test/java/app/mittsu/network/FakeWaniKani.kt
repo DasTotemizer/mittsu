@@ -15,6 +15,10 @@ class FakeWaniKani {
     var rateLimitNext = 0
     var serverErrorNext = 0
     var revokeToken = false
+    /** Bodies of every POST /reviews received, in order. */
+    val postedReviews = CopyOnWriteArrayList<String>()
+    /** How POST /reviews answers; by default it accepts the review like WaniKani does. */
+    var reviewResponder: (assignmentId: Long, body: String) -> MockResponse = { id, _ -> reviewCreated(id) }
 
     fun start(): FakeWaniKani {
         server.dispatcher = object : Dispatcher() {
@@ -32,6 +36,13 @@ class FakeWaniKani {
                     return MockResponse().setResponseCode(401).setBody("""{"error":"Unauthorized","code":401}""")
                 }
                 val path = request.requestUrl!!.encodedPath.removePrefix("/v2/")
+                if (request.method == "POST" && path == "reviews") {
+                    val body = request.body.readUtf8()
+                    postedReviews += body
+                    val id = Regex("\"assignment_id\":(\\d+)").find(body)!!.groupValues[1].toLong()
+                    return reviewResponder(id, body)
+                }
+                if (request.method != "GET") return MockResponse().setResponseCode(405)
                 val query = request.requestUrl!!.query
                 val fixture = when (path) {
                     "user" -> "user"
@@ -48,6 +59,22 @@ class FakeWaniKani {
         server.start()
         return this
     }
+
+    /** A 201 like WaniKani's, including the updated assignment moved to its next interval. */
+    fun reviewCreated(assignmentId: Long, subjectId: Long = assignmentId % 1000, nextAvailableAt: String = "2026-12-24T00:00:00.000000Z") = MockResponse()
+        .setResponseCode(201)
+        .setBody(
+            """{"id":${assignmentId + 9000},"object":"review","url":"x","data_updated_at":"2026-11-26T12:00:00.000000Z",
+            "data":{"created_at":"2026-11-26T12:00:00.000000Z","assignment_id":$assignmentId,"subject_id":$subjectId,
+            "spaced_repetition_system_id":1,"starting_srs_stage":4,"ending_srs_stage":5,"incorrect_meaning_answers":0,"incorrect_reading_answers":0},
+            "resources_updated":{"assignment":{"id":$assignmentId,"object":"assignment","url":"x","data_updated_at":"x",
+            "data":{"subject_id":$subjectId,"subject_type":"kanji","srs_stage":5,"unlocked_at":"2026-01-01T00:00:00.000000Z",
+            "started_at":"2026-01-01T00:00:00.000000Z","passed_at":null,"burned_at":null,"available_at":"$nextAvailableAt","resurrected_at":null,"hidden":false}},
+            "review_statistic":{"id":${assignmentId + 5000},"object":"review_statistic","url":"x","data_updated_at":"x",
+            "data":{"subject_id":$subjectId,"subject_type":"kanji","meaning_correct":5,"meaning_incorrect":1,"reading_correct":4,"reading_incorrect":2,"percentage_correct":75,"hidden":false}}}}""",
+        )
+
+    fun reviewRefused(message: String) = MockResponse().setResponseCode(422).setBody("""{"error":"$message","code":422}""")
 
     val baseUrl: String get() = server.url("/v2/").toString()
 

@@ -35,6 +35,22 @@ class QuestionGenerator(
         return Question(subject, type, options, difficulty).also { check(QuestionSafety.isSafe(it)) { "unsafe question" } }
     }
 
+    /**
+     * Quick check that a real three-answer question can be built for this subject: at least two
+     * safe distractors that don't clash with each other exist somewhere in the pool. Real reviews
+     * use it to leave out subjects that would otherwise need the self-check fallback.
+     */
+    fun canAsk(subject: QuizSubject, type: QuestionType): Boolean {
+        if (type == QuestionType.READING && !subject.hasReadingQuestion) return false
+        val safe = tiers(subject, type).last().asSequence().filter { isSafeCandidate(subject, it, type) }
+        val tried = mutableListOf<QuizSubject>()
+        for (candidate in safe) {
+            if (tried.any { !conflicts(it, candidate, type) }) return true
+            if (tried.size < 8) tried += candidate
+        }
+        return false
+    }
+
     /** Candidate pools from narrowest to widest. Wider pools are used only if narrower ones run dry. */
     private fun tiers(subject: QuizSubject, type: QuestionType): List<List<QuizSubject>> {
         val others = pool.filter { it.id != subject.id }
