@@ -4,6 +4,8 @@ import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
+import retrofit2.http.PUT
+import retrofit2.http.Path
 import retrofit2.http.Header
 import retrofit2.http.Url
 
@@ -11,7 +13,7 @@ import retrofit2.http.Url
  * Read endpoints of WaniKani API v2. Collection calls take a full or relative URL so that
  * `pages.next_url` can be followed exactly as the API returns it.
  * The only write endpoint so far is POST /reviews, used solely by [app.mittsu.reviews.ReviewSubmitter].
- * PUT /assignments/{id}/start (lessons) is added in phase 5.
+ * PUT /assignments/{id}/start is used solely by [app.mittsu.lessons.LessonStarter].
  */
 interface WaniKaniService {
     @GET("user")
@@ -32,6 +34,10 @@ interface WaniKaniService {
 
     @POST("reviews")
     suspend fun createReview(@Body body: CreateReviewRequest): Response<CreateReviewResponse>
+
+    /** Finishes a lesson: moves the assignment into the SRS (stage 1). */
+    @PUT("assignments/{id}/start")
+    suspend fun startAssignment(@Path("id") assignmentId: Long, @Body body: StartAssignmentBody): Response<ResourceDto<AssignmentDto>>
 
     @GET
     suspend fun srsSystems(@Url url: String): Response<CollectionDto<SrsSystemDto>>

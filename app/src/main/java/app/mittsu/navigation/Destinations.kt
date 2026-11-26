@@ -16,7 +16,8 @@ object Routes {
     const val STATS = "stats"
     const val SETTINGS = "settings"
     const val CONNECT = "connect"
-    const val PRACTICE_QUIZ = "practice_quiz"
+    const val PRACTICE_QUIZ = "practice_quiz/{custom}"
+    fun practiceQuiz(custom: Boolean) = "practice_quiz/$custom"
     /** Real review session. `size` is a session size, or [REVIEW_RESUME] to continue a saved one. */
     const val REVIEW_QUIZ = "review_quiz/{size}"
     const val REVIEW_RESUME = -1

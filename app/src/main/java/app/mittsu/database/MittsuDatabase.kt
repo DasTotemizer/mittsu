@@ -9,18 +9,18 @@ import androidx.room.TypeConverters
 
 /**
  * Local cache of the connected WaniKani account. WaniKani stays the source of truth: the cache
- * tables are only ever filled from API responses. The one exception is `pending_reviews`, the
- * outbox of finished real reviews waiting to be sent. Everything is wiped on disconnect.
+ * tables are only ever filled from API responses. The exceptions are `pending_reviews` and
+ * `pending_lesson_starts`, the outboxes of finished reviews and lessons waiting to be sent. Everything is wiped on disconnect.
  */
 @Database(
     entities = [
         UserEntity::class, SubjectEntity::class, AssignmentEntity::class,
         ReviewStatisticEntity::class, SrsSystemEntity::class, SyncStateEntity::class,
-        PendingReviewEntity::class, ActiveSessionEntity::class,
+        PendingReviewEntity::class, ActiveSessionEntity::class, PendingLessonEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    autoMigrations = [AutoMigration(from = 1, to = 2)],
+    autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @TypeConverters(Converters::class)
 abstract class MittsuDatabase : RoomDatabase() {
@@ -32,6 +32,7 @@ abstract class MittsuDatabase : RoomDatabase() {
     abstract fun syncState(): SyncStateDao
     abstract fun pendingReviews(): PendingReviewDao
     abstract fun activeSession(): ActiveSessionDao
+    abstract fun pendingLessons(): PendingLessonDao
 
     companion object {
         fun create(context: Context): MittsuDatabase =

@@ -15,6 +15,9 @@ class FakeWaniKani {
     var rateLimitNext = 0
     var serverErrorNext = 0
     var revokeToken = false
+    /** (assignment id, body) of every PUT /assignments/{id}/start received, in order. */
+    val lessonStarts = CopyOnWriteArrayList<Pair<Long, String>>()
+    var lessonResponder: (assignmentId: Long, body: String) -> MockResponse = { id, _ -> assignmentStarted(id) }
     /** Bodies of every POST /reviews received, in order. */
     val postedReviews = CopyOnWriteArrayList<String>()
     /** How POST /reviews answers; by default it accepts the review like WaniKani does. */
@@ -41,6 +44,13 @@ class FakeWaniKani {
                     postedReviews += body
                     val id = Regex("\"assignment_id\":(\\d+)").find(body)!!.groupValues[1].toLong()
                     return reviewResponder(id, body)
+                }
+                val start = Regex("assignments/(\\d+)/start").matchEntire(path)
+                if (request.method == "PUT" && start != null) {
+                    val id = start.groupValues[1].toLong()
+                    val body = request.body.readUtf8()
+                    lessonStarts += id to body
+                    return lessonResponder(id, body)
                 }
                 if (request.method != "GET") return MockResponse().setResponseCode(405)
                 val query = request.requestUrl!!.query
@@ -73,6 +83,12 @@ class FakeWaniKani {
             "review_statistic":{"id":${assignmentId + 5000},"object":"review_statistic","url":"x","data_updated_at":"x",
             "data":{"subject_id":$subjectId,"subject_type":"kanji","meaning_correct":5,"meaning_incorrect":1,"reading_correct":4,"reading_incorrect":2,"percentage_correct":75,"hidden":false}}}}""",
         )
+
+    fun assignmentStarted(assignmentId: Long, subjectId: Long = assignmentId - 1000) = MockResponse().setResponseCode(200).setBody(
+        """{"id":$assignmentId,"object":"assignment","url":"x","data_updated_at":"2026-11-26T12:00:00.000000Z",
+        "data":{"subject_id":$subjectId,"subject_type":"kanji","srs_stage":1,"unlocked_at":"2026-11-01T00:00:00.000000Z",
+        "started_at":"2026-11-26T12:00:00.000000Z","passed_at":null,"burned_at":null,"available_at":"2026-11-26T16:00:00.000000Z","resurrected_at":null,"hidden":false}}""",
+    )
 
     fun reviewRefused(message: String) = MockResponse().setResponseCode(422).setBody("""{"error":"$message","code":422}""")
 

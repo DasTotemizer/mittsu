@@ -145,3 +145,20 @@ data class ActiveSessionEntity(
     val json: String,
     val savedAt: Long,
 )
+
+/**
+ * A finished lesson waiting to be started on WaniKani (PUT /assignments/{id}/start). Like
+ * [PendingReviewEntity] it is stored before sending, and the assignment id is unique: a lesson
+ * can only ever be started once.
+ */
+@Entity(tableName = "pending_lesson_starts", indices = [Index("status")])
+data class PendingLessonEntity(
+    @PrimaryKey val assignmentId: Long,
+    val subjectId: Long,
+    val completedAt: Long,
+    val status: ReviewStatus = ReviewStatus.PENDING,
+    val attempts: Int = 0,
+    val submittedAt: Long? = null,
+    val message: String? = null,
+    val visible: Boolean = true,
+)

@@ -77,6 +77,19 @@
   are left out of real sessions and stay due on WaniKani untouched.
 - "Reviews today" on the dashboard now counts reviews finished in Mittsu today.
 
+## Phase 5 (done): lessons and practice
+
+- Lessons screen: available lessons in WaniKani's order (level, then lesson position), batches of
+  3, 5 or 10, then teaching cards with meanings, readings, components, mnemonics (WaniKani markup
+  coloured, never rendered as HTML), hints and context sentences.
+- A three-answer quiz over each batch. A lesson is finished on WaniKani (PUT /assignments/{id}/start,
+  with `started_at` set to when it was answered correctly) only once every required answer is right.
+- The same outbox pattern as reviews: `pending_lesson_starts` (Room v3, auto-migrated), stored before
+  sending, unique per assignment, no blind retry after 5xx, retried by WorkManager and on app start.
+- Lessons Mittsu can't quiz with three fair answers are left for the WaniKani website and counted.
+- Custom practice: level range, subject types, SRS stages, weak subjects only (under 80% correct on
+  WaniKani, weakest first) and session size. Practice still has no access to any write endpoint.
+
 ## Known limitations so far
 
 - Sample data is shown until an account is connected (labelled in the UI).
@@ -91,7 +104,10 @@
   and shows as "not accepted"; the review itself did count. Nothing is ever recorded twice.
 - Ending a session early sends only fully answered subjects. Partly answered ones stay due.
 - Disconnecting the account discards reviews still waiting to be sent.
-- Lessons, Progress and the holiday workflow are placeholders. Practice offers quick practice only.
+- A lesson batch in progress is not saved if the app is closed; nothing is lost on WaniKani, the
+  lessons simply stay available.
+- Practice choices are remembered only while the app is open.
+- Progress and the holiday workflow are placeholders. Practice offers quick practice only.
 - Radicals that WaniKani shows only as an image (no character) are left out of quizzes for now.
 - Portrait-only by design.
 - Fonts use the system serif and sans-serif families (no bundled font files yet).

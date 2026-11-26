@@ -26,8 +26,8 @@ Built in phases (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 | 2 | WaniKani connection: token, profile, subjects, assignments, caching | **Done** |
 | 3 | Three-answer quiz engine and difficulty | **Done** |
 | 4 | Real reviews submitted to WaniKani | **Done** |
-| 5 | Lessons and practice mode | Next |
-| 6 | Smart review management (Daily Balance, Gentle Recovery) | |
+| 5 | Lessons and practice mode | **Done** |
+| 6 | Smart review management (Daily Balance, Gentle Recovery) | Next |
 | 7 | Holiday Mode | |
 | 8 | Statistics, polish, offline | |
 

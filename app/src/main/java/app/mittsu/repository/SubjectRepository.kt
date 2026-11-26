@@ -1,6 +1,7 @@
 package app.mittsu.repository
 
 import app.mittsu.database.MittsuDatabase
+import app.mittsu.quiz.PracticeInfo
 import app.mittsu.quiz.QuizSubject
 import app.mittsu.quiz.toQuizSubject
 import kotlinx.coroutines.Dispatchers
@@ -22,5 +23,14 @@ class SubjectRepository(private val db: MittsuDatabase) {
     /** Subjects the user has already started on WaniKani (passed their lesson). */
     suspend fun learnedSubjectIds(): Set<Long> = withContext(Dispatchers.IO) {
         db.assignments().visible().filter { it.startedAt != null }.map { it.subjectId }.toSet()
+    }
+
+    /** SRS stage and accuracy of every learned subject, for practice filters. */
+    suspend fun practiceInfo(): Map<Long, PracticeInfo> = withContext(Dispatchers.IO) {
+        val stats = db.reviewStatistics().visible().associateBy { it.subjectId }
+        db.assignments().visible().filter { it.startedAt != null && it.srsStage > 0 }.associate { a ->
+            val st = stats[a.subjectId]
+            a.subjectId to PracticeInfo(a.srsStage, st?.percentageCorrect, (st?.meaningIncorrect ?: 0) + (st?.readingIncorrect ?: 0))
+        }
     }
 }
