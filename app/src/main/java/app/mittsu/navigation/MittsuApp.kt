@@ -32,7 +32,11 @@ import app.mittsu.dashboard.DashboardViewModel
 import app.mittsu.holiday.HolidayScreen
 import app.mittsu.lessons.LessonsScreen
 import app.mittsu.network.WaniKaniConfig
+import app.mittsu.quiz.PracticeQuizViewModel
 import app.mittsu.quiz.PracticeScreen
+import app.mittsu.quiz.QuizPhase
+import app.mittsu.quiz.QuizScreen
+import app.mittsu.quiz.practiceMode
 import app.mittsu.reviews.ReviewsScreen
 import app.mittsu.settings.ConnectScreen
 import app.mittsu.settings.ConnectViewModel
@@ -94,7 +98,21 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
             }
             composable(Routes.REVIEWS) { ReviewsScreen(onBack = navController::popBackStack) }
             composable(Routes.LESSONS) { LessonsScreen(onBack = navController::popBackStack) }
-            composable(Routes.PRACTICE) { PracticeScreen() }
+            composable(Routes.PRACTICE) { PracticeScreen(onQuickPractice = { navController.navigate(Routes.PRACTICE_QUIZ) }) }
+            composable(Routes.PRACTICE_QUIZ) {
+                val vm: PracticeQuizViewModel = viewModel(factory = PracticeQuizViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { if (vm.state.value.phase == QuizPhase.Loading) vm.start() }
+                QuizScreen(
+                    state = state,
+                    mode = practiceMode(),
+                    onSelect = vm::select,
+                    onContinue = vm::next,
+                    onFinishEarly = vm::finish,
+                    onExit = navController::popBackStack,
+                    onRestart = { vm.start() },
+                )
+            }
             composable(Routes.HOLIDAY) {
                 HolidayScreen(
                     onOpenVacationSettings = { context.openExternalUrl(WaniKaniConfig.ACCOUNT_SETTINGS_URL) },
@@ -119,6 +137,9 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                     onConnect = { navController.navigate(Routes.CONNECT) },
                     onSyncNow = vm::syncNow,
                     onDisconnect = vm::disconnect,
+                    onAdaptive = vm::setAdaptive,
+                    onQuizFocus = vm::setQuizFocus,
+                    onRandomise = vm::setRandomise,
                 )
             }
             composable(Routes.CONNECT) {

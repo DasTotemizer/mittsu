@@ -61,6 +61,24 @@ class ScreenshotCapture {
     @Test fun dashboardLight() = shoot("dashboard-light", ThemePreference.LIGHT)
     @Test fun dashboardDark() = shoot("dashboard-dark", ThemePreference.DARK)
 
+    private val quizQuestion = app.mittsu.quiz.QuestionGenerator(app.mittsu.quiz.TestSubjects.all, kotlin.random.Random(4))
+        .generate(app.mittsu.quiz.TestSubjects.dai, app.mittsu.quiz.QuestionType.MEANING, app.mittsu.domain.model.Difficulty.HARD)
+    private val quizState = app.mittsu.quiz.QuizUiState(app.mittsu.quiz.QuizPhase.Asking, quizQuestion, questionNumber = 4, completedItems = 3, totalItems = 10, difficulty = app.mittsu.domain.model.Difficulty.HARD)
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun quizLight() = shootContent("quiz-light", ThemePreference.LIGHT) {
+        app.mittsu.quiz.QuizScreen(quizState, app.mittsu.quiz.practiceMode(), {}, {}, {}, {}, {})
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun quizAnsweredDark() = shootContent("quiz-answered-dark", ThemePreference.DARK) {
+        val wrong = (quizQuestion.correctIndex + 1) % 3
+        app.mittsu.quiz.QuizScreen(
+            quizState.copy(selected = wrong, explanation = app.mittsu.quiz.Explanation.after(quizQuestion, wrong)),
+            app.mittsu.quiz.practiceMode(), {}, {}, {}, {}, {},
+        )
+    }
+
     @Test fun connectLight() = shootContent("connect-light", ThemePreference.LIGHT) {
         app.mittsu.settings.ConnectScreen(
             state = app.mittsu.settings.ConnectUiState(token = "00000000-1111-2222-3333-444444444444"),

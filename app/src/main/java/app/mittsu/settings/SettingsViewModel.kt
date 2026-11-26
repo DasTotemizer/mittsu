@@ -12,6 +12,7 @@ import app.mittsu.domain.model.SyncStatus
 import app.mittsu.repository.AccountRepository
 import app.mittsu.domain.model.ReviewManagementMode
 import app.mittsu.domain.model.ThemePreference
+import app.mittsu.quiz.QuizFocus
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -35,6 +36,9 @@ class SettingsViewModel(
     fun setDifficulty(value: Difficulty) = launchSet { repository.setDifficulty(value) }
     fun setReviewMode(value: ReviewManagementMode) = launchSet { repository.setReviewMode(value) }
     fun setDailyTarget(value: Int) = launchSet { repository.setDailyTarget(value) }
+    fun setAdaptive(value: Boolean) = launchSet { repository.setAdaptiveDifficulty(value) }
+    fun setQuizFocus(value: QuizFocus) = launchSet { repository.setQuizFocus(value) }
+    fun setRandomise(value: Boolean) = launchSet { repository.setRandomiseAnswers(value) }
 
     private fun launchSet(block: suspend () -> Unit) {
         viewModelScope.launch { block() }

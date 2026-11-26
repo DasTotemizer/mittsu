@@ -19,8 +19,8 @@ android {
         applicationId = appId
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "0.2.0-phase2"
+        versionCode = 3
+        versionName = "0.3.0-phase3"
 
         resValue("string", "app_name", appName)
         buildConfigField("String", "APP_NAME", "\"$appName\"")
