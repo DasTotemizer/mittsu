@@ -1,0 +1,4 @@
+{"object":"collection","url":"x","pages":{"per_page":500,"next_url":null,"previous_url":null},"total_count":2,"data_updated_at":"2026-11-26T09:00:00.000000Z","data":[
+{"id":201,"object":"review_statistic","url":"x","data_updated_at":"x","data":{"created_at":"x","subject_id":1,"subject_type":"radical","meaning_correct":9,"meaning_incorrect":1,"meaning_max_streak":5,"meaning_current_streak":3,"reading_correct":1,"reading_incorrect":0,"reading_max_streak":1,"reading_current_streak":1,"percentage_correct":90,"hidden":false}},
+{"id":202,"object":"review_statistic","url":"x","data_updated_at":"x","data":{"created_at":"x","subject_id":440,"subject_type":"kanji","meaning_correct":8,"meaning_incorrect":2,"reading_correct":7,"reading_incorrect":2,"percentage_correct":79,"hidden":false}}
+]}

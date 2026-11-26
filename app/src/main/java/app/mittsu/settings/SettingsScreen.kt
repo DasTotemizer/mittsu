@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -23,17 +26,23 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import app.mittsu.BuildConfig
+import app.mittsu.domain.model.ConnectionState
 import app.mittsu.domain.model.Difficulty
+import app.mittsu.domain.model.SyncStatus
 import app.mittsu.domain.model.ReviewManagementMode
 import app.mittsu.domain.model.ThemePreference
 import app.mittsu.ui.components.Kicker
 import app.mittsu.ui.components.MittsuCard
 import kotlin.math.roundToInt
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun SettingsScreen(
@@ -43,7 +52,22 @@ fun SettingsScreen(
     onReviewMode: (ReviewManagementMode) -> Unit,
     onDailyTarget: (Int) -> Unit,
     onOpenWaniKaniAccount: () -> Unit,
+    connection: ConnectionState = ConnectionState.Disconnected,
+    syncStatus: SyncStatus = SyncStatus.Idle,
+    onConnect: () -> Unit = {},
+    onSyncNow: () -> Unit = {},
+    onDisconnect: () -> Unit = {},
 ) {
+    var confirmDisconnect by remember { mutableStateOf(false) }
+    if (confirmDisconnect) {
+        AlertDialog(
+            onDismissRequest = { confirmDisconnect = false },
+            title = { Text("Disconnect WaniKani?") },
+            text = { Text("This removes your token and the cached WaniKani data from this phone. Your WaniKani account and progress are not affected.") },
+            confirmButton = { TextButton(onClick = { confirmDisconnect = false; onDisconnect() }) { Text("Disconnect") } },
+            dismissButton = { TextButton(onClick = { confirmDisconnect = false }) { Text("Cancel") } },
+        )
+    }
     LazyColumn(
         Modifier.fillMaxSize(),
         contentPadding = PaddingValues(20.dp),
@@ -104,10 +128,52 @@ fun SettingsScreen(
 
         item {
             Section("WaniKani account") {
-                Text(
-                    "Account connection arrives in build phase 2. Vacation Mode is managed on WaniKani's website.",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+                when (connection) {
+                    ConnectionState.Disconnected -> {
+                        Text("Not connected. Mittsu is showing sample data.", style = MaterialTheme.typography.bodyMedium)
+                        Spacer(Modifier.height(10.dp))
+                        Button(onClick = onConnect, modifier = Modifier.testTag("settings-connect")) { Text("Connect WaniKani") }
+                    }
+                    is ConnectionState.Connected -> {
+                        val user = connection.user
+                        Text(
+                            user?.let { "${it.username} · level ${it.level}" } ?: "Connected",
+                            style = MaterialTheme.typography.titleMedium,
+                            modifier = Modifier.testTag("settings-username"),
+                        )
+                        if (user != null) {
+                            Text(
+                                subscriptionLabel(user.subscriptionType) +
+                                    if (user.vacationStartedAt != null) " · Vacation Mode is on" else "",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            when (syncStatus) {
+                                SyncStatus.Idle -> "Not synced yet this session"
+                                is SyncStatus.Running -> syncStatus.step + "…"
+                                is SyncStatus.Done -> "Synced at " + DateTimeFormatter.ofPattern("HH:mm").withZone(ZoneId.systemDefault()).format(syncStatus.at)
+                                is SyncStatus.Failed -> syncStatus.message
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = if (syncStatus is SyncStatus.Failed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(Modifier.height(10.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            OutlinedButton(onClick = onSyncNow, enabled = syncStatus !is SyncStatus.Running) { Text("Sync now") }
+                            if (syncStatus is SyncStatus.Failed && syncStatus.needsReconnect) {
+                                Button(onClick = onConnect) { Text("Reconnect") }
+                            }
+                            TextButton(onClick = { confirmDisconnect = true }, modifier = Modifier.testTag("settings-disconnect")) {
+                                Text("Disconnect", color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Text("Vacation Mode is managed on WaniKani's website.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 TextButton(onClick = onOpenWaniKaniAccount, contentPadding = PaddingValues(0.dp)) {
                     Text("Open WaniKani account settings")
                     Icon(Icons.AutoMirrored.Rounded.OpenInNew, null, Modifier.padding(start = 6.dp))

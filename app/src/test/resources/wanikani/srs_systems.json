@@ -1,0 +1,3 @@
+{"object":"collection","url":"x","pages":{"per_page":500,"next_url":null,"previous_url":null},"total_count":1,"data_updated_at":"2026-01-01T00:00:00.000000Z","data":[
+{"id":2,"object":"spaced_repetition_system","url":"x","data_updated_at":"x","data":{"name":"Faster","unlocking_stage_position":0,"starting_stage_position":1,"passing_stage_position":5,"burning_stage_position":9,"stages":[{"interval":null,"position":0,"interval_unit":null},{"interval":7200,"position":1,"interval_unit":"seconds"},{"interval":2,"position":2,"interval_unit":"hours"}]}}
+]}

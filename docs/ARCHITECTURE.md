@@ -11,15 +11,27 @@ app.mittsu
 ├── ui/theme/                           palette, typography, shapes, extra semantic colours
 ├── ui/components/                      cards, progress bar, SRS bar, accuracy ring, pills
 ├── domain/model/                       pure Kotlin models and rules (unit tested)
-├── repository/                         data-source interfaces; Phase 1 sample implementation
+├── repository/                         account (connect/sync/disconnect), sync engine, mappers with
+│                                       validation, dashboard calculator, sample data
 ├── settings/                           DataStore-backed preferences, settings screen
-├── network/                            WaniKani API constants (client arrives in Phase 2)
+├── data/                               encrypted token store (Android Keystore AES-GCM)
+├── network/                            WaniKani DTOs, Retrofit service, client (headers, paging, rate limits)
+├── database/                           Room cache: user, subjects, assignments, review stats, SRS, sync cursors
 ├── dashboard/                          home screen + ViewModel
 ├── reviews/ lessons/ quiz/ holiday/ stats/   feature screens (placeholders until their phase)
 ```
 
-Planned for later phases: `database/` (Room cache of subjects, assignments, pending review
-submissions, local practice stats), `data/` (WaniKani DTOs and mappers), and a secure token store.
+## Data flow
+
+```
+WaniKani API ──► WaniKaniClient ──► WaniKaniSync ──► Room cache ──► DashboardCalculator ──► ViewModel ──► UI
+                 (auth, paging,     (validates via                   (pure, unit tested)
+                  rate limits)       WaniKaniMappers)
+```
+
+The UI only reads from the cache, so everything already downloaded works offline. Sync runs when the
+dashboard opens (at most every 5 minutes), on pull to refresh, and from Settings. Later phases add
+pending review submissions and local practice statistics to the database.
 
 ## Key rules baked into the structure
 

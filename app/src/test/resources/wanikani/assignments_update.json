@@ -1,0 +1,3 @@
+{"object":"collection","url":"x","pages":{"per_page":500,"next_url":null,"previous_url":null},"total_count":1,"data_updated_at":"2026-11-26T11:00:00.000000Z","data":[
+{"id":101,"object":"assignment","url":"x","data_updated_at":"x","data":{"created_at":"x","subject_id":1,"subject_type":"radical","srs_stage":5,"unlocked_at":"2026-01-01T00:00:00.000000Z","started_at":"2026-01-01T00:00:00.000000Z","passed_at":"2026-11-26T10:30:00.000000Z","burned_at":null,"available_at":"2026-12-03T10:00:00.000000Z","resurrected_at":null,"hidden":false}}
+]}

@@ -16,9 +16,12 @@ data class DashboardSummary(
     val reviewsInNextDay: Int,
     val srsDistribution: SrsDistribution,
     val recentAccuracy: Float?,
+    val accuracyCaption: String = "Sample figure",
     val reviewMode: ReviewManagementMode,
     val holidayActive: Boolean,
     val isSampleData: Boolean,
+    /** WaniKani reports Vacation Mode as on (read-only: it can only be changed on WaniKani). */
+    val vacationActive: Boolean = false,
 )
 
 /** Progress towards today's target. Pure so it can be unit tested. */

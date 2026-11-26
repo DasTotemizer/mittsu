@@ -15,6 +15,7 @@ object Routes {
     const val HOLIDAY = "holiday"
     const val STATS = "stats"
     const val SETTINGS = "settings"
+    const val CONNECT = "connect"
 }
 
 enum class TopLevelDestination(val route: String, val label: String, val icon: ImageVector) {
