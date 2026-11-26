@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The encrypted WaniKani token is bound to this device's Keystore and must never be backed up. -->
+<full-backup-content>
+    <exclude domain="sharedpref" path="mittsu_secure.xml" />
+    <exclude domain="file" path="datastore/mittsu_secure.preferences_pb" />
+</full-backup-content>
