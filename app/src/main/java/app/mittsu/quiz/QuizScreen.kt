@@ -65,10 +65,13 @@ import app.mittsu.ui.theme.MittsuTheme
 import kotlin.math.roundToInt
 
 /** Visual identity of a session: practice (indigo) or real WaniKani (vermilion). */
-data class QuizMode(val label: String, val accent: Color, val container: Color)
+data class QuizMode(val label: String, val accent: Color, val container: Color, val isReal: Boolean = false)
 
 @Composable
 fun practiceMode() = QuizMode("Practice only", MittsuTheme.colors.practice, MittsuTheme.colors.practiceContainer)
+
+@Composable
+fun realMode() = QuizMode("Real WaniKani", MittsuTheme.colors.real, MittsuTheme.colors.realContainer, isReal = true)
 
 @Composable
 fun QuizScreen(
@@ -79,6 +82,7 @@ fun QuizScreen(
     onFinishEarly: () -> Unit,
     onExit: () -> Unit,
     onRestart: () -> Unit,
+    onRetrySending: () -> Unit = {},
 ) {
     when (val phase = state.phase) {
         QuizPhase.Loading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = mode.accent) }
@@ -92,7 +96,7 @@ fun QuizScreen(
             OutlinedButton(onClick = onExit) { Text("Back") }
         }
         QuizPhase.Asking -> AskingContent(state, mode, onSelect, onContinue, onFinishEarly)
-        QuizPhase.Finished -> SummaryContent(state, mode, onExit, onRestart)
+        QuizPhase.Finished -> SummaryContent(state, mode, onExit, onRestart, onRetrySending)
     }
 }
 
@@ -291,7 +295,7 @@ private fun FeedbackPanel(state: QuizUiState, q: Question, mode: QuizMode, onCon
 }
 
 @Composable
-private fun SummaryContent(state: QuizUiState, mode: QuizMode, onExit: () -> Unit, onRestart: () -> Unit) {
+private fun SummaryContent(state: QuizUiState, mode: QuizMode, onExit: () -> Unit, onRestart: () -> Unit, onRetrySending: () -> Unit) {
     val s = state.stats
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp).testTag("summary")) {
         ModePill(mode.label, mode.accent, mode.container)
@@ -326,6 +330,17 @@ private fun SummaryContent(state: QuizUiState, mode: QuizMode, onExit: () -> Uni
             StatLine("Duration", formatDuration(state.durationMillis))
         }
         Spacer(Modifier.height(10.dp))
+        if (mode.isReal) {
+            RealSubmission(state, mode, onRetrySending)
+            Spacer(Modifier.height(20.dp))
+            Button(
+                onClick = onExit,
+                modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag("summary-done"),
+                colors = ButtonDefaults.buttonColors(containerColor = mode.accent),
+                shape = MaterialTheme.shapes.medium,
+            ) { Text("Done") }
+            return@Column
+        }
         Text(
             "Practice results stay on this phone and are never sent to WaniKani.",
             style = MaterialTheme.typography.bodySmall,
@@ -340,6 +355,32 @@ private fun SummaryContent(state: QuizUiState, mode: QuizMode, onExit: () -> Uni
         ) { Text("Practise again") }
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onExit, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Done") }
+    }
+}
+
+@Composable
+private fun RealSubmission(state: QuizUiState, mode: QuizMode, onRetrySending: () -> Unit) {
+    val sub = state.submission ?: SubmissionSummary()
+    MittsuCard(Modifier.fillMaxWidth().testTag("submission")) {
+        Kicker("Sent to WaniKani", color = mode.accent)
+        Spacer(Modifier.height(8.dp))
+        StatLine("Reviews recorded on WaniKani", sub.sent.toString())
+        if (sub.waiting > 0) StatLine("Saved, waiting to send", sub.waiting.toString())
+        if (sub.refused > 0) StatLine("Not accepted by WaniKani", sub.refused.toString())
+        if (state.excluded > 0) StatLine("Left for the WaniKani website", state.excluded.toString())
+        Spacer(Modifier.height(6.dp))
+        Text(
+            when {
+                sub.waiting > 0 -> "Waiting reviews are kept on this phone and sent automatically when you're back online."
+                sub.total == 0 -> "No subject was fully answered, so nothing was sent. Partly answered subjects stay due on WaniKani."
+                else -> "Only subjects with every answer correct are sent, with the number of wrong tries for meaning and reading."
+            },
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (sub.waiting > 0) {
+            OutlinedButton(onClick = onRetrySending, modifier = Modifier.padding(top = 8.dp).testTag("retry-sending")) { Text("Try sending now") }
+        }
     }
 }
 

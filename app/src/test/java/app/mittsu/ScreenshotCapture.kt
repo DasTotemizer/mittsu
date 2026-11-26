@@ -96,4 +96,31 @@ class ScreenshotCapture {
             DashboardActions(),
         )
     }
+
+    private val reviewsState = app.mittsu.reviews.ReviewsUiState(
+        loading = false, ready = 64, excluded = 2, sizeOptions = app.mittsu.reviews.SessionSize.options(64), selectedSize = 20,
+        completedToday = 30, dailyTarget = 50, waitingToSend = 1, hasSavedSession = false,
+    )
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun reviewsLight() = shootContent("reviews-light", ThemePreference.LIGHT) {
+        app.mittsu.reviews.ReviewsScreen(reviewsState, app.mittsu.reviews.ReviewsActions())
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun reviewQuizDark() = shootContent("review-quiz-dark", ThemePreference.DARK) {
+        app.mittsu.quiz.QuizScreen(quizState, app.mittsu.quiz.realMode(), {}, {}, {}, {}, {})
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun reviewSummaryLight() = shootContent("review-summary-light", ThemePreference.LIGHT) {
+        app.mittsu.quiz.QuizScreen(
+            app.mittsu.quiz.QuizUiState(
+                phase = app.mittsu.quiz.QuizPhase.Finished, completedItems = 20, totalItems = 20, durationMillis = 412_000,
+                stats = app.mittsu.quiz.SessionStats(answered = 41, correct = 36, meaningCorrect = 20, meaningIncorrect = 2, readingCorrect = 16, readingIncorrect = 3),
+                submission = app.mittsu.quiz.SubmissionSummary(sent = 20),
+            ),
+            app.mittsu.quiz.realMode(), {}, {}, {}, {}, {},
+        )
+    }
 }

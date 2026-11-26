@@ -22,6 +22,8 @@ sealed class WaniKaniError(message: String) : Exception(message) {
         init { if (cause != null) initCause(cause) }
     }
     class Server(val code: Int) : WaniKaniError("WaniKani returned an error ($code).")
+    /** 422: WaniKani refused the request, e.g. the assignment is not available for review. */
+    class Unprocessable(val detail: String) : WaniKaniError("WaniKani refused this: $detail")
     class InvalidResponse(detail: String) : WaniKaniError("Unexpected response from WaniKani: $detail")
 }
 
@@ -52,7 +54,11 @@ class WaniKaniClient(
     private val maxRateLimitWaits: Int = 3,
     private val maxServerRetries: Int = 2,
 ) {
-    suspend fun <T> call(block: suspend () -> Response<T>): T {
+    /**
+     * @param retryServerErrors false for writes: after a 5xx WaniKani may already have stored the
+     * request, so a blind retry could record a review twice. 429s are always safe to wait out.
+     */
+    suspend fun <T> call(retryServerErrors: Boolean = true, block: suspend () -> Response<T>): T {
         var rateLimitWaits = 0
         var serverRetries = 0
         while (true) {
@@ -68,17 +74,24 @@ class WaniKaniClient(
                     ?: throw WaniKaniError.InvalidResponse("empty body")
                 response.code() == 401 -> throw WaniKaniError.Unauthorized()
                 response.code() == 403 -> throw WaniKaniError.Forbidden()
+                response.code() == 422 -> throw WaniKaniError.Unprocessable(errorMessage(response) ?: "request not accepted")
                 response.code() == 429 -> {
                     if (rateLimitWaits++ >= maxRateLimitWaits) throw WaniKaniError.RateLimited()
                     sleep(rateLimitWaitMillis(response.headers()["RateLimit-Reset"]))
                 }
                 response.code() >= 500 -> {
-                    if (serverRetries++ >= maxServerRetries) throw WaniKaniError.Server(response.code())
+                    if (!retryServerErrors || serverRetries++ >= maxServerRetries) throw WaniKaniError.Server(response.code())
                     sleep(1_000L * (1 shl serverRetries))
                 }
                 else -> throw WaniKaniError.Server(response.code())
             }
         }
+    }
+
+    private fun errorMessage(response: Response<*>): String? = try {
+        response.errorBody()?.string()?.let { WaniKaniJson.decodeFromString(ApiErrorDto.serializer(), it).error }
+    } catch (_: Exception) {
+        null
     }
 
     /** Waits until the reset time WaniKani gives (epoch seconds), between 1 s and 65 s. */

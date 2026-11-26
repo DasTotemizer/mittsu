@@ -109,6 +109,15 @@ class QuizSession private constructor(
         } else null
     }
 
+    /**
+     * Takes an item out of the session entirely (its questions too). Used when a real review
+     * can't be asked fairly, so it is left untouched on WaniKani rather than guessed at.
+     */
+    fun removeItem(subjectId: Long) {
+        items.remove(subjectId)
+        queue.removeAll { it.subjectId == subjectId }
+    }
+
     /** Stops early: drops questions for items not yet started so a session can end cleanly. */
     fun wrapUp() {
         val started = items.values.filter { it.meaningDone || it.readingDone || it.incorrectMeaning + it.incorrectReading > 0 }.map { it.subjectId }.toSet()

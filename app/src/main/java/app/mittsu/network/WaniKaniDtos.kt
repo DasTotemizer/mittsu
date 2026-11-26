@@ -163,3 +163,45 @@ data class SrsSystemDto(
     @SerialName("burning_stage_position") val burningStagePosition: Int = 9,
     val stages: List<SrsStageDto> = emptyList(),
 )
+
+// ---- POST /reviews ----
+
+@Serializable
+data class CreateReviewBody(
+    @SerialName("assignment_id") val assignmentId: Long,
+    @SerialName("incorrect_meaning_answers") val incorrectMeaningAnswers: Int,
+    @SerialName("incorrect_reading_answers") val incorrectReadingAnswers: Int,
+    /** When the review was actually completed. Omitted only if WaniKani rejects the device clock. */
+    @SerialName("created_at") val createdAt: String? = null,
+)
+
+@Serializable
+data class CreateReviewRequest(val review: CreateReviewBody)
+
+@Serializable
+data class ReviewDataDto(
+    @SerialName("assignment_id") val assignmentId: Long,
+    @SerialName("subject_id") val subjectId: Long? = null,
+    @SerialName("starting_srs_stage") val startingSrsStage: Int? = null,
+    @SerialName("ending_srs_stage") val endingSrsStage: Int? = null,
+    @SerialName("incorrect_meaning_answers") val incorrectMeaningAnswers: Int = 0,
+    @SerialName("incorrect_reading_answers") val incorrectReadingAnswers: Int = 0,
+    @SerialName("created_at") val createdAt: String? = null,
+)
+
+@Serializable
+data class ResourcesUpdatedDto(
+    val assignment: ResourceDto<AssignmentDto>? = null,
+    @SerialName("review_statistic") val reviewStatistic: ResourceDto<ReviewStatisticDto>? = null,
+)
+
+@Serializable
+data class CreateReviewResponse(
+    val id: Long? = null,
+    @SerialName("object") val objectType: String,
+    val data: ReviewDataDto,
+    @SerialName("resources_updated") val resourcesUpdated: ResourcesUpdatedDto? = null,
+)
+
+@Serializable
+data class ApiErrorDto(val error: String? = null, val code: Int? = null)

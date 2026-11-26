@@ -57,17 +57,41 @@
 - Settings: adaptive difficulty, question focus (mixed / meaning / reading), shuffle answer positions.
 - 102 tests.
 
+## Phase 4 (done): real reviews
+
+- Reviews screen: due count, session size (10 / 20 / 50 / All, default from the review mode and
+  today's target), unfinished-session resume, waiting-to-send banner and refused reviews.
+- Only assignments WaniKani says are due now (`available_at` in the past, SRS stages 1 to 8) are asked,
+  oldest first. Meaning is always asked; reading too for kanji and vocabulary.
+- A review is sent only when every required answer is correct, with separate wrong-answer counts for
+  meaning and reading, and `created_at` set to when it was finished. If WaniKani rejects the phone's
+  clock, it is sent once more without `created_at`.
+- Outbox: each finished review is written to `pending_reviews` (Room v2, auto-migrated from v1)
+  before anything is sent. The unique (assignment, available_at) key makes a second copy impossible;
+  a mutex stops two senders from overlapping; 5xx errors on POST are not retried blindly.
+- Sending happens straight away, again on app start and when the Reviews screen opens, and through
+  WorkManager once a connection is available. Network, server and token problems keep the review
+  waiting. A 422 sets it aside as refused and shows WaniKani's reason.
+- The session is saved after every answer. Resuming skips anything that was reviewed elsewhere meanwhile.
+- Subjects that would need the self-check fallback (or are image-only radicals, or are not downloaded)
+  are left out of real sessions and stay due on WaniKani untouched.
+- "Reviews today" on the dashboard now counts reviews finished in Mittsu today.
+
 ## Known limitations so far
 
 - Sample data is shown until an account is connected (labelled in the UI).
-- **Reviews completed today** is counted from reviews submitted through Mittsu (from Phase 4).
+- **Reviews completed today** is counted from reviews finished in Mittsu.
   WaniKani's API no longer lists past reviews, so reviews done on the website or other apps today
   can't be counted.
 - Accuracy is all-time, from WaniKani's review statistics. Per-session accuracy arrives with Phase 4.
 - WaniKani does not say which permissions a token has. A token without `reviews:create` or
   `assignments:start` will connect fine and only fail when submitting (handled with a clear message).
 - Tested against a scripted fake server and the real API's error responses; not yet with a live token.
-- Reviews, Lessons, Progress and the holiday workflow are placeholders. Practice offers quick practice only.
+- If a review's send succeeds but the reply is lost, the retry is refused by WaniKani (already done)
+  and shows as "not accepted"; the review itself did count. Nothing is ever recorded twice.
+- Ending a session early sends only fully answered subjects. Partly answered ones stay due.
+- Disconnecting the account discards reviews still waiting to be sent.
+- Lessons, Progress and the holiday workflow are placeholders. Practice offers quick practice only.
 - Radicals that WaniKani shows only as an image (no character) are left out of quizzes for now.
 - Portrait-only by design.
 - Fonts use the system serif and sans-serif families (no bundled font files yet).

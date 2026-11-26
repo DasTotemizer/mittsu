@@ -9,5 +9,7 @@ class MittsuApplication : Application() {
     override fun onCreate() {
         super.onCreate()
         container = DefaultAppContainer(this)
+        // Send any real reviews finished while offline or before the app was last closed.
+        if (container.accountRepository.isConnected) container.reviewRepository.sendSoon()
     }
 }

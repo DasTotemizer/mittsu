@@ -105,3 +105,43 @@ data class StoredSentence(val en: String, val ja: String)
 
 @kotlinx.serialization.Serializable
 data class StoredImage(val url: String, val contentType: String? = null)
+
+/** Status of a review completed in Mittsu, from the moment it is finished until WaniKani has it. */
+enum class ReviewStatus { PENDING, SUBMITTED, REJECTED }
+
+/**
+ * A finished real review. It is written here before anything is sent, so a crash, a lost
+ * connection or a closed app never loses it. The unique (assignmentId, availableAt) pair is the
+ * review's identity: the same assignment can be reviewed again only once WaniKani has moved its
+ * available_at, so a repeated insert for the same review is ignored and nothing is sent twice.
+ */
+@Entity(
+    tableName = "pending_reviews",
+    indices = [Index(value = ["assignmentId", "availableAt"], unique = true), Index("status"), Index("completedAt")],
+)
+data class PendingReviewEntity(
+    @PrimaryKey(autoGenerate = true) val id: Long = 0,
+    val assignmentId: Long,
+    val subjectId: Long,
+    /** The assignment's available_at when the review was asked (epoch ms). */
+    val availableAt: Long,
+    val incorrectMeaning: Int,
+    val incorrectReading: Int,
+    /** When every required answer was correct: sent to WaniKani as created_at. */
+    val completedAt: Long,
+    val status: ReviewStatus = ReviewStatus.PENDING,
+    val attempts: Int = 0,
+    val submittedAt: Long? = null,
+    /** WaniKani's reason when it refused the review. */
+    val message: String? = null,
+    /** False once the user has dismissed a refused review from the list. */
+    val visible: Boolean = true,
+)
+
+/** The real review session in progress, saved after every answer so it can be resumed. */
+@Entity(tableName = "active_session")
+data class ActiveSessionEntity(
+    @PrimaryKey val key: Int = 0,
+    val json: String,
+    val savedAt: Long,
+)

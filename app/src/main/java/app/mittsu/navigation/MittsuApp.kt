@@ -37,7 +37,13 @@ import app.mittsu.quiz.PracticeScreen
 import app.mittsu.quiz.QuizPhase
 import app.mittsu.quiz.QuizScreen
 import app.mittsu.quiz.practiceMode
+import app.mittsu.quiz.realMode
+import app.mittsu.reviews.RealReviewViewModel
+import app.mittsu.reviews.ReviewsActions
 import app.mittsu.reviews.ReviewsScreen
+import app.mittsu.reviews.ReviewsViewModel
+import androidx.navigation.NavType
+import androidx.navigation.navArgument
 import app.mittsu.settings.ConnectScreen
 import app.mittsu.settings.ConnectViewModel
 import app.mittsu.settings.SettingsScreen
@@ -96,7 +102,44 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                     ),
                 )
             }
-            composable(Routes.REVIEWS) { ReviewsScreen(onBack = navController::popBackStack) }
+            composable(Routes.REVIEWS) {
+                val vm: ReviewsViewModel = viewModel(factory = ReviewsViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { vm.onOpen() }
+                ReviewsScreen(
+                    state = state,
+                    actions = ReviewsActions(
+                        onStart = { size -> navController.navigate(Routes.reviewQuiz(size)) },
+                        onResume = { navController.navigate(Routes.reviewQuiz(Routes.REVIEW_RESUME)) },
+                        onDiscardSaved = vm::discardSavedSession,
+                        onChooseSize = vm::chooseSize,
+                        onSendNow = vm::sendNow,
+                        onDismissRefused = vm::dismissRefused,
+                        onConnect = { navController.navigate(Routes.CONNECT) },
+                        onOpenVacationSettings = { context.openExternalUrl(WaniKaniConfig.ACCOUNT_SETTINGS_URL) },
+                        onBack = navController::popBackStack,
+                    ),
+                )
+            }
+            composable(
+                Routes.REVIEW_QUIZ,
+                arguments = listOf(navArgument("size") { type = NavType.IntType }),
+            ) { entry ->
+                val size = entry.arguments?.getInt("size") ?: 0
+                val vm: RealReviewViewModel = viewModel(factory = RealReviewViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { if (size == Routes.REVIEW_RESUME) vm.resume() else vm.start(size) }
+                QuizScreen(
+                    state = state,
+                    mode = realMode(),
+                    onSelect = vm::select,
+                    onContinue = vm::next,
+                    onFinishEarly = vm::finish,
+                    onExit = navController::popBackStack,
+                    onRestart = navController::popBackStack,
+                    onRetrySending = vm::retrySending,
+                )
+            }
             composable(Routes.LESSONS) { LessonsScreen(onBack = navController::popBackStack) }
             composable(Routes.PRACTICE) { PracticeScreen(onQuickPractice = { navController.navigate(Routes.PRACTICE_QUIZ) }) }
             composable(Routes.PRACTICE_QUIZ) {

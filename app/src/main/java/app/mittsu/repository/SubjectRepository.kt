@@ -14,6 +14,11 @@ class SubjectRepository(private val db: MittsuDatabase) {
         db.subjects().byLevels(1, 60).mapNotNull { it.toQuizSubject() }
     }
 
+    /** Every cached, visible subject by id; the value is null when it can't be quizzed safely. */
+    suspend fun quizIndex(): Map<Long, QuizSubject?> = withContext(Dispatchers.IO) {
+        db.subjects().byLevels(1, 60).associate { it.id to it.toQuizSubject() }
+    }
+
     /** Subjects the user has already started on WaniKani (passed their lesson). */
     suspend fun learnedSubjectIds(): Set<Long> = withContext(Dispatchers.IO) {
         db.assignments().visible().filter { it.startedAt != null }.map { it.subjectId }.toSet()
