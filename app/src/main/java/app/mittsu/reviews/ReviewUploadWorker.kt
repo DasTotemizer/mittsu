@@ -13,7 +13,7 @@ import androidx.work.WorkerParameters
 import app.mittsu.MittsuApplication
 import java.util.concurrent.TimeUnit
 
-/** Asks for waiting reviews to be sent once a connection is available, even if the app is closed. */
+/** Asks for waiting reviews and lessons to be sent once a connection is available, even if the app is closed. */
 fun interface UploadScheduler {
     fun schedule()
 }
@@ -38,11 +38,12 @@ class WorkManagerUploadScheduler(private val context: Context) : UploadScheduler
 class ReviewUploadWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
         val app = applicationContext as? MittsuApplication ?: return Result.failure()
-        val report = app.container.reviewSubmitter.submitPending()
+        val reviews = app.container.reviewSubmitter.submitPending()
+        val lessons = app.container.lessonStarter.submitPending()
         return when {
-            report.stillPending == 0 -> Result.success()
+            reviews.stillPending == 0 && lessons.stillPending == 0 -> Result.success()
             // A token problem won't fix itself: the app shows it and the user reconnects.
-            report.needsReconnect -> Result.failure()
+            reviews.needsReconnect || lessons.needsReconnect -> Result.failure()
             runAttemptCount >= 8 -> Result.failure()
             else -> Result.retry()
         }

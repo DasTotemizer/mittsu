@@ -11,6 +11,8 @@ import app.mittsu.repository.DashboardRepository
 import app.mittsu.repository.SampleDashboardRepository
 import app.mittsu.repository.SubjectRepository
 import app.mittsu.repository.WaniKaniAccountRepository
+import app.mittsu.lessons.LessonRepository
+import app.mittsu.lessons.LessonStarter
 import app.mittsu.reviews.ReviewRepository
 import app.mittsu.reviews.ReviewSubmitter
 import app.mittsu.reviews.WorkManagerUploadScheduler
@@ -29,6 +31,11 @@ interface AppContainer {
     /** The only path to POST /reviews. Practice code is never given this. */
     val reviewSubmitter: ReviewSubmitter
     val reviewRepository: ReviewRepository
+    /** The only path to PUT /assignments/{id}/start. */
+    val lessonStarter: LessonStarter
+    val lessonRepository: LessonRepository
+    /** The custom practice choices, kept while the app is open. */
+    val practiceFilters: kotlinx.coroutines.flow.MutableStateFlow<app.mittsu.quiz.PracticeFilters>
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -42,6 +49,9 @@ class DefaultAppContainer(context: Context) : AppContainer {
         AccountDashboardRepository(accountRepository, database, SampleDashboardRepository())
     override val subjectRepository: SubjectRepository = SubjectRepository(database)
     override val reviewSubmitter: ReviewSubmitter = ReviewSubmitter(client, database)
-    override val reviewRepository: ReviewRepository =
-        ReviewRepository(database, reviewSubmitter, WorkManagerUploadScheduler(context.applicationContext))
+    private val uploadScheduler = WorkManagerUploadScheduler(context.applicationContext)
+    override val reviewRepository: ReviewRepository = ReviewRepository(database, reviewSubmitter, uploadScheduler)
+    override val lessonStarter: LessonStarter = LessonStarter(client, database)
+    override val lessonRepository: LessonRepository = LessonRepository(database, lessonStarter, uploadScheduler)
+    override val practiceFilters = kotlinx.coroutines.flow.MutableStateFlow(app.mittsu.quiz.PracticeFilters())
 }

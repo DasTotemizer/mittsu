@@ -49,6 +49,7 @@ class MigrationTest {
             val id = db.pendingReviews().insert(PendingReviewEntity(assignmentId = 101, subjectId = 1, availableAt = 5, incorrectMeaning = 0, incorrectReading = 0, completedAt = 6))
             assertTrue(id > 0)
             assertEquals(null, db.activeSession().get())
+            assertEquals(101L, db.pendingLessons().insert(PendingLessonEntity(101, 1, 6)))
         } finally {
             db.close()
             file.delete()

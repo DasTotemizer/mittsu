@@ -30,10 +30,14 @@ import app.mittsu.dashboard.DashboardActions
 import app.mittsu.dashboard.DashboardScreen
 import app.mittsu.dashboard.DashboardViewModel
 import app.mittsu.holiday.HolidayScreen
+import app.mittsu.lessons.LessonActions
+import app.mittsu.lessons.LessonViewModel
 import app.mittsu.lessons.LessonsScreen
 import app.mittsu.network.WaniKaniConfig
 import app.mittsu.quiz.PracticeQuizViewModel
+import app.mittsu.quiz.PracticeActions
 import app.mittsu.quiz.PracticeScreen
+import app.mittsu.quiz.PracticeSetupViewModel
 import app.mittsu.quiz.QuizPhase
 import app.mittsu.quiz.QuizScreen
 import app.mittsu.quiz.practiceMode
@@ -140,12 +144,56 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                     onRetrySending = vm::retrySending,
                 )
             }
-            composable(Routes.LESSONS) { LessonsScreen(onBack = navController::popBackStack) }
-            composable(Routes.PRACTICE) { PracticeScreen(onQuickPractice = { navController.navigate(Routes.PRACTICE_QUIZ) }) }
-            composable(Routes.PRACTICE_QUIZ) {
+            composable(Routes.LESSONS) {
+                val vm: LessonViewModel = viewModel(factory = LessonViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { vm.onOpen() }
+                LessonsScreen(
+                    state = state,
+                    actions = LessonActions(
+                        onChooseBatch = vm::chooseBatchSize,
+                        onStartBatch = vm::startBatch,
+                        onNextCard = vm::nextCard,
+                        onPreviousCard = vm::previousCard,
+                        onStartQuiz = vm::startQuiz,
+                        onSelect = vm::select,
+                        onContinue = vm::next,
+                        onEndQuiz = vm::endQuiz,
+                        onMoreLessons = vm::backToOverview,
+                        onSendNow = vm::sendNow,
+                        onDismissRefused = vm::dismissRefused,
+                        onConnect = { navController.navigate(Routes.CONNECT) },
+                        onOpenVacationSettings = { context.openExternalUrl(WaniKaniConfig.ACCOUNT_SETTINGS_URL) },
+                        onBack = navController::popBackStack,
+                    ),
+                )
+            }
+            composable(Routes.PRACTICE) {
+                val vm: PracticeSetupViewModel = viewModel(factory = PracticeSetupViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { vm.onOpen() }
+                PracticeScreen(
+                    state = state,
+                    actions = PracticeActions(
+                        onQuickPractice = { navController.navigate(Routes.practiceQuiz(custom = false)) },
+                        onCustomPractice = { navController.navigate(Routes.practiceQuiz(custom = true)) },
+                        onLevels = vm::setLevels,
+                        onToggleType = vm::toggleType,
+                        onToggleSrs = vm::toggleSrs,
+                        onWeakOnly = vm::setWeakOnly,
+                        onSize = vm::setSize,
+                    ),
+                )
+            }
+            composable(Routes.PRACTICE_QUIZ, arguments = listOf(navArgument("custom") { type = NavType.BoolType })) { entry ->
+                val custom = entry.arguments?.getBoolean("custom") == true
                 val vm: PracticeQuizViewModel = viewModel(factory = PracticeQuizViewModel.factory(container))
                 val state by vm.state.collectAsStateWithLifecycle()
-                LaunchedEffect(Unit) { if (vm.state.value.phase == QuizPhase.Loading) vm.start() }
+                LaunchedEffect(Unit) {
+                    if (vm.state.value.phase == QuizPhase.Loading) {
+                        if (custom) container.practiceFilters.value.let { vm.start(it.size, it) } else vm.start()
+                    }
+                }
                 QuizScreen(
                     state = state,
                     mode = practiceMode(),
@@ -153,7 +201,7 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                     onContinue = vm::next,
                     onFinishEarly = vm::finish,
                     onExit = navController::popBackStack,
-                    onRestart = { vm.start() },
+                    onRestart = vm::restart,
                 )
             }
             composable(Routes.HOLIDAY) {

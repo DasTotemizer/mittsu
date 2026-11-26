@@ -38,6 +38,7 @@ interface AssignmentDao {
 interface ReviewStatisticDao {
     @Upsert suspend fun upsertAll(stats: List<ReviewStatisticEntity>)
     @Query("SELECT * FROM review_statistics WHERE hidden = 0") fun observeVisible(): Flow<List<ReviewStatisticEntity>>
+    @Query("SELECT * FROM review_statistics WHERE hidden = 0") suspend fun visible(): List<ReviewStatisticEntity>
 }
 
 @Dao
@@ -80,4 +81,23 @@ interface ActiveSessionDao {
     @Query("SELECT * FROM active_session WHERE `key` = 0") fun observe(): Flow<ActiveSessionEntity?>
     @Upsert suspend fun save(session: ActiveSessionEntity)
     @Query("DELETE FROM active_session") suspend fun clear()
+}
+
+@Dao
+interface PendingLessonDao {
+    /** Returns -1 when this lesson is already recorded. */
+    @Insert(onConflict = OnConflictStrategy.IGNORE) suspend fun insert(lesson: PendingLessonEntity): Long
+    @Query("SELECT * FROM pending_lesson_starts WHERE status = 'PENDING' ORDER BY completedAt") suspend fun pending(): List<PendingLessonEntity>
+    @Query("SELECT * FROM pending_lesson_starts WHERE assignmentId = :id") suspend fun get(id: Long): PendingLessonEntity?
+    @Query("SELECT * FROM pending_lesson_starts") suspend fun all(): List<PendingLessonEntity>
+    @Query("SELECT * FROM pending_lesson_starts WHERE status = 'PENDING' OR (status = 'REJECTED' AND visible = 1) ORDER BY completedAt")
+    fun observeOutstanding(): Flow<List<PendingLessonEntity>>
+    @Query("SELECT * FROM pending_lesson_starts WHERE completedAt >= :since") fun observeSince(since: Long): Flow<List<PendingLessonEntity>>
+    @Query("UPDATE pending_lesson_starts SET status = 'SUBMITTED', submittedAt = :at, message = NULL, attempts = attempts + 1 WHERE assignmentId = :id")
+    suspend fun markSubmitted(id: Long, at: Long)
+    @Query("UPDATE pending_lesson_starts SET status = 'REJECTED', message = :message, attempts = attempts + 1 WHERE assignmentId = :id")
+    suspend fun markRejected(id: Long, message: String)
+    @Query("UPDATE pending_lesson_starts SET attempts = attempts + 1, message = :message WHERE assignmentId = :id")
+    suspend fun markAttemptFailed(id: Long, message: String)
+    @Query("UPDATE pending_lesson_starts SET visible = 0 WHERE status = 'REJECTED'") suspend fun dismissRejected()
 }

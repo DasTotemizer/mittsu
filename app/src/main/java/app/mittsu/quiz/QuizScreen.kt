@@ -71,6 +71,9 @@ data class QuizMode(val label: String, val accent: Color, val container: Color, 
 fun practiceMode() = QuizMode("Practice only", MittsuTheme.colors.practice, MittsuTheme.colors.practiceContainer)
 
 @Composable
+fun lessonMode() = QuizMode("Lesson quiz", MittsuTheme.colors.highlight, MittsuTheme.colors.highlight.copy(alpha = 0.16f), isReal = true)
+
+@Composable
 fun realMode() = QuizMode("Real WaniKani", MittsuTheme.colors.real, MittsuTheme.colors.realContainer, isReal = true)
 
 @Composable

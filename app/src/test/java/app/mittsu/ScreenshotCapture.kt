@@ -123,4 +123,27 @@ class ScreenshotCapture {
             app.mittsu.quiz.realMode(), {}, {}, {}, {}, {},
         )
     }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun lessonCardLight() = shootContent("lesson-card-light", ThemePreference.LIGHT) {
+        app.mittsu.lessons.LessonsScreen(
+            app.mittsu.lessons.LessonUiState(step = app.mittsu.lessons.LessonStep.TEACHING, batch = listOf(app.mittsu.lessons.sampleCard, app.mittsu.lessons.sampleCard, app.mittsu.lessons.sampleCard), cardIndex = 1),
+            app.mittsu.lessons.LessonActions(),
+        )
+    }
+
+    @Config(qualifiers = "w411dp-h891dp-xxhdpi")
+    @Test fun lessonsOverviewDark() = shootContent("lessons-dark", ThemePreference.DARK) {
+        app.mittsu.lessons.LessonsScreen(
+            app.mittsu.lessons.LessonUiState(step = app.mittsu.lessons.LessonStep.OVERVIEW, available = 17, excluded = 1),
+            app.mittsu.lessons.LessonActions(),
+        )
+    }
+
+    @Test fun practiceLight() = shootContent("practice-light", ThemePreference.LIGHT) {
+        app.mittsu.quiz.PracticeScreen(
+            app.mittsu.quiz.PracticeSetupState(loaded = true, filters = app.mittsu.quiz.PracticeFilters(minLevel = 3, maxLevel = 9, weakOnly = true), matching = 42, learned = 880, maxLevel = 14),
+            app.mittsu.quiz.PracticeActions(),
+        )
+    }
 }

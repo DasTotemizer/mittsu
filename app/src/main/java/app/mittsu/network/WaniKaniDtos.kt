@@ -205,3 +205,11 @@ data class CreateReviewResponse(
 
 @Serializable
 data class ApiErrorDto(val error: String? = null, val code: Int? = null)
+
+// ---- PUT /assignments/{id}/start ----
+
+@Serializable
+data class StartAssignmentBody(
+    /** When the lesson was finished. Omitted only if WaniKani rejects the device clock. */
+    @SerialName("started_at") val startedAt: String? = null,
+)

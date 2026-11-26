@@ -81,7 +81,9 @@ class PracticeQuizViewModel(
         _state.value = QuizUiState(phase = QuizPhase.Unavailable("Something went wrong preparing this question. Please try again."))
     }
 
-    fun start(size: Int = 10) {
+    /** Quick practice of [size] random learned subjects, or a custom session when [filters] is given. */
+    fun start(size: Int = 10, filters: PracticeFilters? = null) {
+        lastFilters = filters
         viewModelScope.launch(errors) {
             _state.value = QuizUiState()
             settings = settingsRepository.settings.first()
@@ -98,7 +100,12 @@ class PracticeQuizViewModel(
                 )
                 return@launch
             }
-            val chosen = candidates.shuffled(random).take(size)
+            val chosen = if (filters == null) candidates.shuffled(random).take(size)
+                else PracticeFilters.select(candidates, subjects.practiceInfo(), filters, random)
+            if (chosen.isEmpty()) {
+                _state.value = QuizUiState(phase = QuizPhase.Unavailable("No learned subjects match these filters. Try widening them."))
+                return@launch
+            }
             val items = chosen.map { s ->
                 val types = s.questionTypes(settings.quizFocus)
                 SessionItem(s.id, null, QuestionType.MEANING in types, QuestionType.READING in types)
@@ -111,6 +118,10 @@ class PracticeQuizViewModel(
     }
 
     private var nextJob: kotlinx.coroutines.Job? = null
+    private var lastFilters: PracticeFilters? = null
+
+    /** Another session with the same choices as the last one. */
+    fun restart() = start(lastFilters?.size ?: 10, lastFilters)
 
     private fun showNext() {
         if (nextJob?.isActive == true) return // ignore double taps on Continue
