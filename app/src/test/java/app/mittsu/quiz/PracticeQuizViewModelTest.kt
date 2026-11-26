@@ -62,6 +62,11 @@ class PracticeQuizViewModelTest {
         withTimeout(10_000) { while (!match(state.value.phase)) kotlinx.coroutines.delay(20) }
     }
 
+    /** Waits until the next question (or the summary) is on screen. */
+    private fun PracticeQuizViewModel.awaitReady() = runBlocking {
+        withTimeout(10_000) { while (state.value.phase == QuizPhase.Asking && state.value.answered) kotlinx.coroutines.delay(10) }
+    }
+
     @Test fun practiceRunsToCompletionWithoutContactingWaniKani() {
         val vm = PracticeQuizViewModel(SubjectRepository(db), FakeSettings(), random = Random(1))
         vm.start()
@@ -74,6 +79,7 @@ class PracticeQuizViewModelTest {
             assertEquals(3, q.options.size)
             vm.select(q.correctIndex)
             vm.next()
+            vm.awaitReady()
         }
         assertEquals(QuizPhase.Finished, vm.state.value.phase)
         assertEquals(3, vm.state.value.stats.answered)
@@ -87,7 +93,7 @@ class PracticeQuizViewModelTest {
         vm.awaitPhase { it != QuizPhase.Loading }
         while (vm.state.value.phase == QuizPhase.Asking) {
             assertEquals(QuestionType.MEANING, vm.state.value.question!!.type)
-            vm.select(0); vm.next()
+            vm.select(0); vm.next(); vm.awaitReady()
         }
     }
 
