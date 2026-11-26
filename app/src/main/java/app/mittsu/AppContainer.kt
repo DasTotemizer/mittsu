@@ -9,6 +9,7 @@ import app.mittsu.repository.AccountDashboardRepository
 import app.mittsu.repository.AccountRepository
 import app.mittsu.repository.DashboardRepository
 import app.mittsu.repository.SampleDashboardRepository
+import app.mittsu.repository.SubjectRepository
 import app.mittsu.repository.WaniKaniAccountRepository
 import app.mittsu.settings.DataStoreSettingsRepository
 import app.mittsu.settings.SettingsRepository
@@ -21,6 +22,7 @@ interface AppContainer {
     val settingsRepository: SettingsRepository
     val accountRepository: AccountRepository
     val dashboardRepository: DashboardRepository
+    val subjectRepository: SubjectRepository
 }
 
 class DefaultAppContainer(context: Context) : AppContainer {
@@ -32,4 +34,5 @@ class DefaultAppContainer(context: Context) : AppContainer {
     override val accountRepository: AccountRepository = WaniKaniAccountRepository(tokenStore, client, database)
     override val dashboardRepository: DashboardRepository =
         AccountDashboardRepository(accountRepository, database, SampleDashboardRepository())
+    override val subjectRepository: SubjectRepository = SubjectRepository(database)
 }

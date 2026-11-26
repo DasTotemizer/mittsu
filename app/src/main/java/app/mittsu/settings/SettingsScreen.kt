@@ -38,6 +38,7 @@ import app.mittsu.domain.model.Difficulty
 import app.mittsu.domain.model.SyncStatus
 import app.mittsu.domain.model.ReviewManagementMode
 import app.mittsu.domain.model.ThemePreference
+import app.mittsu.quiz.QuizFocus
 import app.mittsu.ui.components.Kicker
 import app.mittsu.ui.components.MittsuCard
 import kotlin.math.roundToInt
@@ -57,6 +58,9 @@ fun SettingsScreen(
     onConnect: () -> Unit = {},
     onSyncNow: () -> Unit = {},
     onDisconnect: () -> Unit = {},
+    onAdaptive: (Boolean) -> Unit = {},
+    onQuizFocus: (QuizFocus) -> Unit = {},
+    onRandomise: (Boolean) -> Unit = {},
 ) {
     var confirmDisconnect by remember { mutableStateOf(false) }
     if (confirmDisconnect) {
@@ -94,6 +98,32 @@ fun SettingsScreen(
                     "Difficulty only changes which three answers you see. It never affects WaniKani scoring.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                SwitchRow(
+                    title = "Adaptive difficulty",
+                    subtitle = "Starts at Normal, gets harder when you're on a roll and easier when it's a tough day.",
+                    checked = settings.adaptiveDifficulty,
+                    onChange = onAdaptive,
+                )
+            }
+        }
+
+        item {
+            Section("Questions") {
+                Segmented(QuizFocus.entries, settings.quizFocus, { it.label.substringBefore(' ') }, onQuizFocus)
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Applies to practice. Real reviews always ask everything WaniKani needs: meaning, plus reading for kanji and vocabulary.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                Spacer(Modifier.height(8.dp))
+                SwitchRow(
+                    title = "Shuffle answer positions",
+                    subtitle = "Off sorts the three answers alphabetically.",
+                    checked = settings.randomiseAnswers,
+                    onChange = onRandomise,
                 )
             }
         }
@@ -188,6 +218,17 @@ fun SettingsScreen(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
+    }
+}
+
+@Composable
+private fun SwitchRow(title: String, subtitle: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        androidx.compose.material3.Switch(checked = checked, onCheckedChange = onChange)
     }
 }
 

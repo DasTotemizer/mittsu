@@ -12,6 +12,10 @@ review question is answered by tapping one of **three** answers. No keyboard dur
 
 *Phase 1 dashboard with sample data.*
 
+| Question | After a wrong answer |
+| --- | --- |
+| ![Quiz](docs/screenshots/quiz-light.png) | ![Feedback](docs/screenshots/quiz-answered-dark.png) |
+
 ## Status
 
 Built in phases (see [docs/ROADMAP.md](docs/ROADMAP.md)).
@@ -20,8 +24,8 @@ Built in phases (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 | --- | --- | --- |
 | 1 | Project foundation, navigation, dashboard on sample data, visual identity | **Done** |
 | 2 | WaniKani connection: token, profile, subjects, assignments, caching | **Done** |
-| 3 | Three-answer quiz engine and difficulty | Next |
-| 4 | Real reviews submitted to WaniKani | |
+| 3 | Three-answer quiz engine and difficulty | **Done** |
+| 4 | Real reviews submitted to WaniKani | Next |
 | 5 | Lessons and practice mode | |
 | 6 | Smart review management (Daily Balance, Gentle Recovery) | |
 | 7 | Holiday Mode | |
