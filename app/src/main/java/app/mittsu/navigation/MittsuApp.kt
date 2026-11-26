@@ -12,6 +12,7 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -33,6 +34,8 @@ import app.mittsu.lessons.LessonsScreen
 import app.mittsu.network.WaniKaniConfig
 import app.mittsu.quiz.PracticeScreen
 import app.mittsu.reviews.ReviewsScreen
+import app.mittsu.settings.ConnectScreen
+import app.mittsu.settings.ConnectViewModel
 import app.mittsu.settings.SettingsScreen
 import app.mittsu.settings.SettingsViewModel
 import app.mittsu.stats.StatsScreen
@@ -75,6 +78,7 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
             composable(Routes.HOME) {
                 val vm: DashboardViewModel = viewModel(factory = DashboardViewModel.factory(container))
                 val state by vm.state.collectAsStateWithLifecycle()
+                LaunchedEffect(Unit) { vm.onOpen() }
                 DashboardScreen(
                     state = state,
                     actions = DashboardActions(
@@ -82,6 +86,9 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                         onStartLessons = { navController.navigate(Routes.LESSONS) },
                         onPractice = { navController.navigateTopLevel(Routes.PRACTICE) },
                         onHoliday = { navController.navigate(Routes.HOLIDAY) },
+                        onConnect = { navController.navigate(Routes.CONNECT) },
+                        onRefresh = vm::refresh,
+                        onOpenVacationSettings = { context.openExternalUrl(WaniKaniConfig.ACCOUNT_SETTINGS_URL) },
                     ),
                 )
             }
@@ -98,6 +105,8 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
             composable(Routes.SETTINGS) {
                 val vm: SettingsViewModel = viewModel(factory = SettingsViewModel.factory(container))
                 val settings by vm.settings.collectAsStateWithLifecycle()
+                val connection by vm.connection.collectAsStateWithLifecycle()
+                val syncStatus by vm.syncStatus.collectAsStateWithLifecycle()
                 SettingsScreen(
                     settings = settings,
                     onTheme = vm::setTheme,
@@ -105,6 +114,23 @@ fun MittsuApp(container: AppContainer, navController: NavHostController = rememb
                     onReviewMode = vm::setReviewMode,
                     onDailyTarget = vm::setDailyTarget,
                     onOpenWaniKaniAccount = { context.openExternalUrl(WaniKaniConfig.ACCOUNT_SETTINGS_URL) },
+                    connection = connection,
+                    syncStatus = syncStatus,
+                    onConnect = { navController.navigate(Routes.CONNECT) },
+                    onSyncNow = vm::syncNow,
+                    onDisconnect = vm::disconnect,
+                )
+            }
+            composable(Routes.CONNECT) {
+                val vm: ConnectViewModel = viewModel(factory = ConnectViewModel.factory(container))
+                val state by vm.state.collectAsStateWithLifecycle()
+                ConnectScreen(
+                    state = state,
+                    onTokenChange = vm::onTokenChange,
+                    onConnect = vm::connect,
+                    onOpenTokenPage = { context.openExternalUrl(WaniKaniConfig.TOKEN_SETTINGS_URL) },
+                    onDone = { navController.navigateTopLevel(Routes.HOME) },
+                    onBack = navController::popBackStack,
                 )
             }
         }

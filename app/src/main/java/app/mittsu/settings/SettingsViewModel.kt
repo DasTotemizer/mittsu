@@ -6,7 +6,10 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import app.mittsu.AppContainer
+import app.mittsu.domain.model.ConnectionState
 import app.mittsu.domain.model.Difficulty
+import app.mittsu.domain.model.SyncStatus
+import app.mittsu.repository.AccountRepository
 import app.mittsu.domain.model.ReviewManagementMode
 import app.mittsu.domain.model.ThemePreference
 import kotlinx.coroutines.flow.SharingStarted
@@ -14,7 +17,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class SettingsViewModel(private val repository: SettingsRepository) : ViewModel() {
+class SettingsViewModel(
+    private val repository: SettingsRepository,
+    private val account: AccountRepository,
+) : ViewModel() {
+    val connection: StateFlow<ConnectionState> =
+        account.connection.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ConnectionState.Disconnected)
+    val syncStatus: StateFlow<SyncStatus> = account.syncStatus
+
+    fun syncNow() = launchSet { account.sync(force = true) }
+    fun disconnect() = launchSet { account.disconnect() }
+
     val settings: StateFlow<AppSettings> =
         repository.settings.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), AppSettings())
 
@@ -29,7 +42,7 @@ class SettingsViewModel(private val repository: SettingsRepository) : ViewModel(
 
     companion object {
         fun factory(container: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-            initializer { SettingsViewModel(container.settingsRepository) }
+            initializer { SettingsViewModel(container.settingsRepository, container.accountRepository) }
         }
     }
 }

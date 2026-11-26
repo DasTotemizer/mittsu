@@ -22,6 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowForward
 import androidx.compose.material.icons.rounded.BeachAccess
+import androidx.compose.material.icons.rounded.CloudOff
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Schedule
@@ -29,11 +30,14 @@ import androidx.compose.material.icons.rounded.School
 import androidx.compose.material.icons.rounded.SelfImprovement
 import androidx.compose.material.icons.rounded.WbSunny
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -52,6 +56,7 @@ import app.mittsu.BuildConfig
 import app.mittsu.domain.model.DashboardSummary
 import app.mittsu.domain.model.NextAction
 import app.mittsu.domain.model.ReviewManagementMode
+import app.mittsu.domain.model.SyncStatus
 import app.mittsu.domain.model.dailyProgress
 import app.mittsu.domain.model.nextAction
 import app.mittsu.ui.components.AccuracyRing
@@ -72,6 +77,9 @@ data class DashboardActions(
     val onStartLessons: () -> Unit = {},
     val onPractice: () -> Unit = {},
     val onHoliday: () -> Unit = {},
+    val onConnect: () -> Unit = {},
+    val onRefresh: () -> Unit = {},
+    val onOpenVacationSettings: () -> Unit = {},
 )
 
 @Composable
@@ -86,13 +94,15 @@ fun DashboardScreen(
         DashboardUiState.Loading -> Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             CircularProgressIndicator()
         }
-        is DashboardUiState.Ready -> DashboardContent(state.summary, actions, modifier, today, now)
+        is DashboardUiState.Ready -> DashboardContent(state.summary, state.sync, actions, modifier, today, now)
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DashboardContent(
     s: DashboardSummary,
+    sync: SyncStatus,
     actions: DashboardActions,
     modifier: Modifier,
     today: LocalDate,
@@ -101,13 +111,20 @@ private fun DashboardContent(
     var shown by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { shown = true }
 
+    PullToRefreshBox(
+        isRefreshing = sync is SyncStatus.Running,
+        onRefresh = actions.onRefresh,
+        modifier = modifier.fillMaxSize(),
+    ) {
     LazyColumn(
-        modifier = modifier.fillMaxSize().testTag("dashboard"),
+        modifier = Modifier.fillMaxSize().testTag("dashboard"),
         contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 32.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
     ) {
         item { Masthead(s, today) }
-        if (s.isSampleData) item { SampleDataNotice() }
+        if (s.isSampleData) item { SampleDataNotice(actions.onConnect) }
+        if (!s.isSampleData) syncNotice(sync, actions)?.let { notice -> item { notice() } }
+        if (s.vacationActive) item { VacationNotice(actions.onOpenVacationSettings) }
         item {
             AnimatedVisibility(shown, enter = fadeIn() + slideInVertically { it / 6 }) {
                 HeroCard(s, now, actions)
@@ -118,6 +135,52 @@ private fun DashboardContent(
         item { SrsCard(s) }
         item { AccuracyCard(s) }
         item { Footnote() }
+    }
+    }
+}
+
+private fun syncNotice(sync: SyncStatus, actions: DashboardActions): (@Composable () -> Unit)? = when (sync) {
+    is SyncStatus.Failed -> {
+        {
+            NoticeRow(
+                icon = Icons.Rounded.CloudOff,
+                tint = MaterialTheme.colorScheme.error,
+                text = if (sync.needsReconnect) "WaniKani no longer accepts your token. Showing saved data." else "${sync.message} Showing saved data.",
+                action = if (sync.needsReconnect) "Reconnect" else "Retry",
+                onAction = if (sync.needsReconnect) actions.onConnect else actions.onRefresh,
+                tag = "sync-error",
+            )
+        }
+    }
+    else -> null
+}
+
+@Composable
+private fun VacationNotice(onOpen: () -> Unit) {
+    NoticeRow(
+        icon = Icons.Rounded.BeachAccess,
+        tint = MittsuTheme.colors.holiday,
+        text = "WaniKani says Vacation Mode is on for your account.",
+        action = "Manage",
+        onAction = onOpen,
+        tag = "vacation-notice",
+    )
+}
+
+@Composable
+private fun NoticeRow(icon: ImageVector, tint: Color, text: String, action: String?, onAction: () -> Unit, tag: String) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .background(tint.copy(alpha = 0.12f), MaterialTheme.shapes.small)
+            .padding(start = 14.dp, end = 4.dp, top = 4.dp, bottom = 4.dp)
+            .testTag(tag),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(10.dp))
+        Text(text, style = MaterialTheme.typography.bodySmall, modifier = Modifier.weight(1f).padding(vertical = 8.dp))
+        if (action != null) TextButton(onClick = onAction) { Text(action) }
     }
 }
 
@@ -163,23 +226,15 @@ private fun LevelBadge(level: Int) {
 }
 
 @Composable
-private fun SampleDataNotice() {
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.14f), MaterialTheme.shapes.small)
-            .padding(horizontal = 14.dp, vertical = 10.dp)
-            .testTag("sample-notice"),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Rounded.Info, null, tint = MaterialTheme.colorScheme.tertiary, modifier = Modifier.size(18.dp))
-        Spacer(Modifier.width(10.dp))
-        Text(
-            "Sample data. Connect your WaniKani account to see your real numbers.",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface,
-        )
-    }
+private fun SampleDataNotice(onConnect: () -> Unit) {
+    NoticeRow(
+        icon = Icons.Rounded.Info,
+        tint = MaterialTheme.colorScheme.tertiary,
+        text = "Sample data. Connect your WaniKani account to see your real numbers.",
+        action = "Connect",
+        onAction = onConnect,
+        tag = "sample-notice",
+    )
 }
 
 @Composable
@@ -217,7 +272,10 @@ private fun HeroCard(s: DashboardSummary, now: Instant, actions: DashboardAction
         Spacer(Modifier.height(6.dp))
         Text(
             buildString {
-                append("${s.totalOutstandingReviews} outstanding in total")
+                append(
+                    if (s.totalOutstandingReviews > s.reviewsDueNow) "${s.totalOutstandingReviews} outstanding in total"
+                    else "Your whole backlog right now",
+                )
                 if (usesTarget) {
                     if (progress.targetReached) append(". Today's target is done, extra reviews are a bonus.")
                     else append(". ${progress.remaining} more to reach today's target.")
@@ -352,7 +410,7 @@ private fun AccuracyCard(s: DashboardSummary) {
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Across your last real review sessions",
+                    s.accuracyCaption,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

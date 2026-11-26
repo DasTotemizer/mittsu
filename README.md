@@ -19,8 +19,8 @@ Built in phases (see [docs/ROADMAP.md](docs/ROADMAP.md)).
 | Phase | What | State |
 | --- | --- | --- |
 | 1 | Project foundation, navigation, dashboard on sample data, visual identity | **Done** |
-| 2 | WaniKani connection: token, profile, subjects, assignments, caching | Next |
-| 3 | Three-answer quiz engine and difficulty | |
+| 2 | WaniKani connection: token, profile, subjects, assignments, caching | **Done** |
+| 3 | Three-answer quiz engine and difficulty | Next |
 | 4 | Real reviews submitted to WaniKani | |
 | 5 | Lessons and practice mode | |
 | 6 | Smart review management (Daily Balance, Gentle Recovery) | |
@@ -65,7 +65,7 @@ Or override per build: `./gradlew assembleDebug -Pmittsu.appName="My Name"`.
 ./gradlew :app:testDebugUnitTest --tests '*ScreenshotCapture*' -Pmittsu.screenshots=$PWD/docs/screenshots
 ```
 
-## WaniKani API token (from Phase 2)
+## Connecting WaniKani
 
 Mittsu uses a personal access token, never your password. Create one at
 <https://www.wanikani.com/settings/personal_access_tokens> with these permissions:
@@ -74,7 +74,16 @@ Mittsu uses a personal access token, never your password. Create one at
 - `reviews:create` (to submit reviews)
 - `assignments:start` (to complete lessons)
 
-The token will be stored encrypted with an Android Keystore key and is excluded from backups.
+In the app, tap **Connect** on the sample-data banner (or Settings → Connect WaniKani), paste the
+token and tap Connect. Mittsu checks the token with WaniKani before saving it, then downloads your
+subjects, assignments and review statistics. The first download takes a little while; after that
+only changes are fetched.
+
+The token is encrypted with an AES key held in the Android Keystore, stored in a private file that
+is excluded from backups, and never logged. Disconnecting (Settings) deletes the token and all
+cached WaniKani data from the phone; your WaniKani account is not affected.
+
+![Connect screen](docs/screenshots/connect-light.png)
 
 ## Docs
 

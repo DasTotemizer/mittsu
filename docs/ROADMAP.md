@@ -12,9 +12,35 @@
 - Holiday screen already opens WaniKani's account settings in a Custom Tab.
 - 21 unit and UI tests.
 
+## Phase 2 (done)
+
+- Personal access token sign-in: format check, validated with `GET /user` before it is saved,
+  stored AES-256-GCM encrypted with an Android Keystore key, excluded from backups, never logged.
+- WaniKani API v2 client (Retrofit + OkHttp + kotlinx.serialization): `Authorization: Bearer` and
+  `Wanikani-Revision: 20170710` headers, pagination via `pages.next_url`, rate-limit handling that
+  waits for `RateLimit-Reset`, retries on 5xx, clear errors for 401/403/network.
+- Room cache of user, subjects (radicals, kanji, vocabulary, kana vocabulary with meanings, auxiliary
+  meanings, readings, mnemonics, hints, context sentences), assignments, review statistics and SRS
+  systems. Incremental sync with `updated_after` after the first full download.
+- Response validation: subjects that would make unsafe questions (no accepted meaning, kanji or
+  vocabulary with no accepted reading, no characters or image) are skipped.
+- Dashboard shows the real level, reviews due now, lessons available, next review, 24 h forecast,
+  SRS distribution and all-time accuracy. Recomputed every minute; pull to refresh; works offline
+  from the cache, with a banner when a sync fails or the token stops working.
+- Settings: account details, Sync now, Disconnect (removes token and cache).
+- Reads WaniKani's Vacation Mode status and shows it (read-only).
+- 55 unit and UI tests, including a scripted fake WaniKani server.
+
 ## Known limitations so far
 
-- No WaniKani connection yet: all dashboard numbers are sample data (labelled in the UI).
+- Sample data is shown until an account is connected (labelled in the UI).
+- **Reviews completed today** is counted from reviews submitted through Mittsu (from Phase 4).
+  WaniKani's API no longer lists past reviews, so reviews done on the website or other apps today
+  can't be counted.
+- Accuracy is all-time, from WaniKani's review statistics. Per-session accuracy arrives with Phase 4.
+- WaniKani does not say which permissions a token has. A token without `reviews:create` or
+  `assignments:start` will connect fine and only fail when submitting (handled with a clear message).
+- Tested against a scripted fake server and the real API's error responses; not yet with a live token.
 - Reviews, Lessons, Practice, Progress and the holiday workflow are placeholders.
 - Portrait-only by design.
 - Fonts use the system serif and sans-serif families (no bundled font files yet).
