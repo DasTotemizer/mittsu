@@ -10,12 +10,16 @@ import app.mittsu.domain.model.Difficulty
 import app.mittsu.repository.SubjectRepository
 import app.mittsu.settings.AppSettings
 import app.mittsu.settings.SettingsRepository
+import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.random.Random
 
 sealed interface QuizPhase {
@@ -62,8 +66,14 @@ class PracticeQuizViewModel(
     private var adaptive = AdaptiveDifficulty()
     private var settings = AppSettings()
 
+    /** Any unexpected failure ends the session with a message instead of crashing the app. */
+    private val errors = CoroutineExceptionHandler { _, e ->
+        Log.e("MittsuQuiz", "Practice session failed", e)
+        _state.value = QuizUiState(phase = QuizPhase.Unavailable("Something went wrong preparing this question. Please try again."))
+    }
+
     fun start(size: Int = 10) {
-        viewModelScope.launch {
+        viewModelScope.launch(errors) {
             _state.value = QuizUiState()
             settings = settingsRepository.settings.first()
             val all = subjects.quizPool()
@@ -91,9 +101,16 @@ class PracticeQuizViewModel(
         }
     }
 
-    private fun currentDifficulty() = if (settings.adaptiveDifficulty) adaptive.current else settings.difficulty
+    private var nextJob: kotlinx.coroutines.Job? = null
 
     private fun showNext() {
+        if (nextJob?.isActive == true) return // ignore double taps on Continue
+        nextJob = viewModelScope.launch(errors) { showNextNow() }
+    }
+
+    private fun currentDifficulty() = if (settings.adaptiveDifficulty) adaptive.current else settings.difficulty
+
+    private suspend fun showNextNow() {
         val s = session ?: return
         val pending = s.current
         if (pending == null) {
@@ -104,7 +121,9 @@ class PracticeQuizViewModel(
             return
         }
         val subject = pool.getValue(pending.subjectId)
-        val question = generator!!.generate(subject, pending.type, currentDifficulty())
+        val difficulty = currentDifficulty()
+        // Scoring thousands of candidates is CPU work: keep it off the main thread.
+        val question = withContext(Dispatchers.Default) { generator!!.generate(subject, pending.type, difficulty) }
         _state.update {
             it.copy(
                 phase = QuizPhase.Asking, question = question, selected = null, explanation = null,

@@ -91,17 +91,20 @@ class QuestionGenerator(
      * repeated questions from always showing the same pair.
      */
     internal fun rank(target: QuizSubject, candidates: List<QuizSubject>, type: QuestionType, difficulty: Difficulty): List<QuizSubject> {
-        val scored = candidates.map { it to Similarity.score(target, it, type) }
-        return when (difficulty) {
-            // Clearly different answers, still from the same kind of subject.
-            Difficulty.EASY -> scored.sortedBy { (_, s) -> s.confusion + random.nextDouble() * 0.15 }
-            // Similar level and type, mild resemblance.
-            Difficulty.NORMAL -> scored.sortedBy { (_, s) ->
-                -(s.levelCloseness * 0.6 + s.confusion * 0.4) + random.nextDouble() * 0.35
+        // Each candidate's sort key (including its random jitter) is computed exactly once.
+        // Drawing random numbers inside the comparator breaks the sort contract on large lists.
+        return candidates.map { c ->
+            val s = Similarity.score(target, c, type)
+            val key = when (difficulty) {
+                // Clearly different answers, still from the same kind of subject.
+                Difficulty.EASY -> s.confusion + random.nextDouble() * 0.15
+                // Similar level and type, mild resemblance.
+                Difficulty.NORMAL -> -(s.levelCloseness * 0.6 + s.confusion * 0.4) + random.nextDouble() * 0.35
+                // The most confusable valid answers available.
+                Difficulty.HARD -> -(s.confusion * 0.8 + s.levelCloseness * 0.2 + random.nextDouble() * 0.1)
             }
-            // The most confusable valid answers available.
-            Difficulty.HARD -> scored.sortedByDescending { (_, s) -> s.confusion * 0.8 + s.levelCloseness * 0.2 + random.nextDouble() * 0.1 }
-        }.map { it.first }
+            c to key
+        }.sortedBy { it.second }.map { it.first }
     }
 
     private fun selfCheck(subject: QuizSubject, type: QuestionType, difficulty: Difficulty): Question {
